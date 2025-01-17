@@ -30,6 +30,11 @@ import software.amazon.awssdk.services.dynamodb.streams.DynamoDbStreamsClient
 
 import java.util.stream.Collectors
 import java.net.URI
+import java.util
+import scala.jdk.CollectionConverters.{
+  asJavaIterableConverter,
+  collectionAsScalaIterableConverter
+}
 import scala.util.{ Failure, Success, Try }
 import scala.jdk.OptionConverters._
 
@@ -70,38 +75,45 @@ object DynamoUtils {
           request.billingMode(BillingMode.PAY_PER_REQUEST)
         }
         if (sourceDescription.hasLocalSecondaryIndexes) {
-          request.localSecondaryIndexes(
-            sourceDescription.localSecondaryIndexes.stream
-              .map(
-                index =>
-                  LocalSecondaryIndex
-                    .builder()
-                    .indexName(index.indexName())
-                    .keySchema(index.keySchema())
-                    .projection(index.projection())
-                    .build())
-              .collect(Collectors.toList[LocalSecondaryIndex])
-          )
+          val localSecondaryIndexes = sourceDescription.localSecondaryIndexes.asScala
+            .map(
+              index =>
+                LocalSecondaryIndex
+                  .builder()
+                  .indexName(index.indexName())
+                  .keySchema(index.keySchema())
+                  .projection(index.projection())
+                  .build())
+            .toList
+          val list = new util.ArrayList[LocalSecondaryIndex]()
+          localSecondaryIndexes.foreach(i => list.add(i))
+
+          request.localSecondaryIndexes(list)
         }
         if (sourceDescription.hasGlobalSecondaryIndexes) {
+          val globalSecondaryIndexes = sourceDescription.globalSecondaryIndexes.asScala
+            .map(
+              index =>
+                GlobalSecondaryIndex
+                  .builder()
+                  .indexName(index.indexName())
+                  .keySchema(index.keySchema())
+                  .projection(index.projection())
+                  .provisionedThroughput(
+                    ProvisionedThroughput
+                      .builder()
+                      .readCapacityUnits(index.provisionedThroughput.readCapacityUnits)
+                      .writeCapacityUnits(index.provisionedThroughput.writeCapacityUnits)
+                      .build()
+                  )
+                  .build())
+            .toList
+
+          //hacky way to fix scala 2.13 to 2.12 migration problem
+          val list = new util.ArrayList[GlobalSecondaryIndex]()
+          globalSecondaryIndexes.foreach(i => list.add(i))
           request.globalSecondaryIndexes(
-            sourceDescription.globalSecondaryIndexes.stream
-              .map(
-                index =>
-                  GlobalSecondaryIndex
-                    .builder()
-                    .indexName(index.indexName())
-                    .keySchema(index.keySchema())
-                    .projection(index.projection())
-                    .provisionedThroughput(
-                      ProvisionedThroughput
-                        .builder()
-                        .readCapacityUnits(index.provisionedThroughput.readCapacityUnits)
-                        .writeCapacityUnits(index.provisionedThroughput.writeCapacityUnits)
-                        .build()
-                    )
-                    .build())
-              .collect(Collectors.toList[GlobalSecondaryIndex])
+            list
           )
         }
 

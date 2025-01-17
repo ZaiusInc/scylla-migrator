@@ -9,7 +9,7 @@ val dynamodbStreamsKinesisAdapterVersion = "1.5.4" // Note This version still de
 inThisBuild(
   List(
     organization := "com.scylladb",
-    scalaVersion := "2.13.14",
+    scalaVersion := "2.12.18",
     scalacOptions ++= Seq("-release:8", "-deprecation", "-unchecked", "-feature"),
   )
 )
@@ -57,7 +57,9 @@ lazy val migrator = (project in file("migrator")).enablePlugins(BuildInfoPlugin)
     "io.circe"       %% "circe-yaml"         % "0.15.1",
   ),
   assembly / assemblyShadeRules := Seq(
-    ShadeRule.rename("org.yaml.snakeyaml.**" -> "com.scylladb.shaded.@1").inAll
+    ShadeRule.rename("org.yaml.snakeyaml.**" -> "com.scylladb.shaded.@1").inAll,
+    ShadeRule.rename("shapeless.**" -> "new_shapeless.@1").inAll,
+    ShadeRule.rename("cats.kernel.**" -> s"new_cats.kernel.@1").inAll
   ),
   assembly / assemblyMergeStrategy := {
     // Handle duplicates between the transitive dependencies of Spark itself
