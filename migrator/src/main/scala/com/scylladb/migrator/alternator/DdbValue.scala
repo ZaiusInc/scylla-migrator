@@ -34,7 +34,7 @@ object DdbValue {
     else if (value.hasL) L(value.l().asScala.map(from))
     else if (value.nul() != null) Null(value.nul())
     else if (value.b() != null) B(value.b())
-    else if (value.hasM) M(value.m().asScala.mapValues(from).toMap)
+    else if (value.hasM) M(value.m().asScala.view.map(e => (e._1, from(e._2))).toMap)
     else if (value.hasSs) Ss(value.ss().asScala)
     else if (value.hasNs) Ns(value.ns().asScala)
     else if (value.hasBs) Bs(value.bs().asScala)

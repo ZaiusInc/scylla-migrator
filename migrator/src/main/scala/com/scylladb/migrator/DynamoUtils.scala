@@ -28,13 +28,8 @@ import software.amazon.awssdk.services.dynamodb.model.{
 }
 import software.amazon.awssdk.services.dynamodb.streams.DynamoDbStreamsClient
 
-import java.util.stream.Collectors
 import java.net.URI
-import java.util
-import scala.jdk.CollectionConverters.{
-  asJavaIterableConverter,
-  collectionAsScalaIterableConverter
-}
+import scala.jdk.CollectionConverters.{ collectionAsScalaIterableConverter, seqAsJavaListConverter }
 import scala.util.{ Failure, Success, Try }
 import scala.jdk.OptionConverters._
 
@@ -85,10 +80,9 @@ object DynamoUtils {
                   .projection(index.projection())
                   .build())
             .toList
-          val list = new util.ArrayList[LocalSecondaryIndex]()
-          localSecondaryIndexes.foreach(i => list.add(i))
+            .asJava
 
-          request.localSecondaryIndexes(list)
+          request.localSecondaryIndexes(localSecondaryIndexes)
         }
         if (sourceDescription.hasGlobalSecondaryIndexes) {
           val globalSecondaryIndexes = sourceDescription.globalSecondaryIndexes.asScala
@@ -108,13 +102,9 @@ object DynamoUtils {
                   )
                   .build())
             .toList
+            .asJava
 
-          //hacky way to fix scala 2.13 to 2.12 migration problem
-          val list = new util.ArrayList[GlobalSecondaryIndex]()
-          globalSecondaryIndexes.foreach(i => list.add(i))
-          request.globalSecondaryIndexes(
-            list
-          )
+          request.globalSecondaryIndexes(globalSecondaryIndexes)
         }
 
         log.info(

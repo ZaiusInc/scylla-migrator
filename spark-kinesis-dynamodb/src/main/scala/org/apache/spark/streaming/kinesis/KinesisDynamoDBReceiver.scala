@@ -37,7 +37,6 @@ import org.apache.spark.streaming.receiver.{BlockGenerator, BlockGeneratorListen
 import org.apache.spark.util.Utils
 
 import scala.collection.JavaConverters.{asScalaIteratorConverter, setAsJavaSetConverter}
-//import scala.collection.immutable.ArraySeq
 
 /**
  * Custom AWS Kinesis-specific implementation of Spark Streaming's Receiver.
