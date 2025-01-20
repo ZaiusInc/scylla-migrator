@@ -303,23 +303,17 @@ object Cassandra {
     SourceDataFrame(filteredDataframe, selection.timestampColumns, false)
   }
 
-  def containsToken(token: Token[_], range: (Token[_], Token[_])): Boolean =
-    //really hacky way to fix type mismatch compilation error
-    token.asInstanceOf[Token[Comparable[_]]] match {
-      case t => {
-        if (range._2
-              .asInstanceOf[Token[Comparable[_]]]
-              .compare(range._1.asInstanceOf[Token[Comparable[_]]]) > 0) {
-          (range._1.asInstanceOf[Token[Comparable[_]]].compare(t) <= 0) &&
-          (range._2.asInstanceOf[Token[Comparable[_]]].compare(t) >= 0)
-        } else {
-          //overflowing range, like (500_000,-500_000)
-          (range._1.asInstanceOf[Token[Comparable[_]]].compare(t) <= 0) ||
-          (range._2.asInstanceOf[Token[Comparable[_]]].compare(t) >= 0)
-        }
-      }
+  def containsToken(token: Token[_], range: (Token[_], Token[_])): Boolean = {
+    val comparableToken = token.asInstanceOf[Token[Comparable[_]]]
+    val comparableRange =
+      (range._1.asInstanceOf[Token[Comparable[_]]], range._2.asInstanceOf[Token[Comparable[_]]])
 
+    if (comparableRange._2 > comparableRange._1) {
+      comparableToken >= comparableRange._1 && comparableToken <= comparableRange._2
+    } else {
+      comparableToken >= comparableRange._1 || comparableToken <= comparableRange._2
     }
+  }
 
   def containsTargetToken(range: (Token[_], Token[_]), targetTokens: Set[Token[_]]): Boolean =
     targetTokens.exists(token => containsToken(token, range))
