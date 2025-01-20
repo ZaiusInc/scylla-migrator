@@ -174,7 +174,7 @@ class StreamedItemsTest extends MigratorSuiteWithAWS {
     val commandPrefix = Seq("docker", "compose", "-f", "../docker-compose-tests.yml", "exec", "spark-master")
     val pid =
       Process(commandPrefix ++ Seq("ps", "-ef"))
-        .lazyLines
+        .lines
         // Find the process that contains the arguments we passed when we submitted the Spark job
         .filter(_.contains(s"--conf spark.scylla.config=/app/configurations/${migrationConfigFile}"))
         .head

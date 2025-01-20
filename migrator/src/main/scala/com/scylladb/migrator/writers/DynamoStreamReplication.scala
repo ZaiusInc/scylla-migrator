@@ -18,6 +18,7 @@ import software.amazon.awssdk.services.dynamodb.model.TableDescription
 
 import java.util
 import java.util.stream.Collectors
+import scala.jdk.CollectionConverters.{ mapAsJavaMapConverter, mapAsScalaMapConverter }
 
 object DynamoStreamReplication {
   val log = LogManager.getLogger("com.scylladb.migrator.writers.DynamoStreamReplication")
@@ -105,16 +106,7 @@ object DynamoStreamReplication {
           (
             new Text,
             new DynamoDBItemWritable(
-              item
-                .entrySet()
-                .stream()
-                .collect(
-                  Collectors.toMap(
-                    (e: util.Map.Entry[String, AttributeValueV1]) => e.getKey,
-                    (e: util.Map.Entry[String, AttributeValueV1]) =>
-                      AttributeValueUtils.fromV1(e.getValue)
-                  )
-                )
+              item.asScala.mapValues(AttributeValueUtils.fromV1).asJava
             )
           )
         }

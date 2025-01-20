@@ -29,6 +29,7 @@ object SourceSettings {
                        fetchSize: Int,
                        preserveTimestamps: Boolean,
                        where: Option[String],
+                       filter: Option[String],
                        consistencyLevel: String)
       extends SourceSettings
   case class DynamoDB(endpoint: Option[DynamoDBEndpoint],

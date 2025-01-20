@@ -28,8 +28,8 @@ import software.amazon.awssdk.services.dynamodb.model.{
 }
 import software.amazon.awssdk.services.dynamodb.streams.DynamoDbStreamsClient
 
-import java.util.stream.Collectors
 import java.net.URI
+import scala.jdk.CollectionConverters.{ collectionAsScalaIterableConverter, seqAsJavaListConverter }
 import scala.util.{ Failure, Success, Try }
 import scala.jdk.OptionConverters._
 
@@ -70,39 +70,41 @@ object DynamoUtils {
           request.billingMode(BillingMode.PAY_PER_REQUEST)
         }
         if (sourceDescription.hasLocalSecondaryIndexes) {
-          request.localSecondaryIndexes(
-            sourceDescription.localSecondaryIndexes.stream
-              .map(
-                index =>
-                  LocalSecondaryIndex
-                    .builder()
-                    .indexName(index.indexName())
-                    .keySchema(index.keySchema())
-                    .projection(index.projection())
-                    .build())
-              .collect(Collectors.toList[LocalSecondaryIndex])
-          )
+          val localSecondaryIndexes = sourceDescription.localSecondaryIndexes.asScala
+            .map(
+              index =>
+                LocalSecondaryIndex
+                  .builder()
+                  .indexName(index.indexName())
+                  .keySchema(index.keySchema())
+                  .projection(index.projection())
+                  .build())
+            .toList
+            .asJava
+
+          request.localSecondaryIndexes(localSecondaryIndexes)
         }
         if (sourceDescription.hasGlobalSecondaryIndexes) {
-          request.globalSecondaryIndexes(
-            sourceDescription.globalSecondaryIndexes.stream
-              .map(
-                index =>
-                  GlobalSecondaryIndex
-                    .builder()
-                    .indexName(index.indexName())
-                    .keySchema(index.keySchema())
-                    .projection(index.projection())
-                    .provisionedThroughput(
-                      ProvisionedThroughput
-                        .builder()
-                        .readCapacityUnits(index.provisionedThroughput.readCapacityUnits)
-                        .writeCapacityUnits(index.provisionedThroughput.writeCapacityUnits)
-                        .build()
-                    )
-                    .build())
-              .collect(Collectors.toList[GlobalSecondaryIndex])
-          )
+          val globalSecondaryIndexes = sourceDescription.globalSecondaryIndexes.asScala
+            .map(
+              index =>
+                GlobalSecondaryIndex
+                  .builder()
+                  .indexName(index.indexName())
+                  .keySchema(index.keySchema())
+                  .projection(index.projection())
+                  .provisionedThroughput(
+                    ProvisionedThroughput
+                      .builder()
+                      .readCapacityUnits(index.provisionedThroughput.readCapacityUnits)
+                      .writeCapacityUnits(index.provisionedThroughput.writeCapacityUnits)
+                      .build()
+                  )
+                  .build())
+            .toList
+            .asJava
+
+          request.globalSecondaryIndexes(globalSecondaryIndexes)
         }
 
         log.info(

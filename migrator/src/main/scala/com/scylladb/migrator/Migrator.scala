@@ -37,7 +37,8 @@ object Migrator {
             spark,
             cassandraSource,
             cassandraSource.preserveTimestamps,
-            migratorConfig.getSkipTokenRangesOrEmptySet)
+            migratorConfig.getSkipTokenRangesOrEmptySet,
+            migratorConfig.getTargetTokens)
           ScyllaMigrator.migrate(migratorConfig, scyllaTarget, sourceDF)
         case (parquetSource: SourceSettings.Parquet, scyllaTarget: TargetSettings.Scylla) =>
           val sourceDF = readers.Parquet.readDataFrame(spark, parquetSource)

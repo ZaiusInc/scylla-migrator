@@ -19,7 +19,6 @@ package org.apache.spark.streaming.kinesis
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
-import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 import com.amazonaws.services.cloudwatch.AmazonCloudWatchClientBuilder
 import com.amazonaws.services.dynamodbv2.{AmazonDynamoDBClientBuilder, AmazonDynamoDBStreamsClient}
@@ -37,7 +36,7 @@ import org.apache.spark.streaming.kinesis.KinesisInitialPositions.AtTimestamp
 import org.apache.spark.streaming.receiver.{BlockGenerator, BlockGeneratorListener, Receiver}
 import org.apache.spark.util.Utils
 
-import scala.collection.immutable.ArraySeq
+import scala.collection.JavaConverters.{asScalaIteratorConverter, setAsJavaSetConverter}
 
 /**
  * Custom AWS Kinesis-specific implementation of Spark Streaming's Receiver.
@@ -333,7 +332,7 @@ private[kinesis] class KinesisDynamoDBReceiver[T](
    * for next block. Internally, this is synchronized with `rememberAddedRange()`.
    */
   private def finalizeRangesForCurrentBlock(blockId: StreamBlockId): Unit = {
-    blockIdToSeqNumRanges.put(blockId, SequenceNumberRanges(seqNumRangesInCurrentBlock.to(ArraySeq)))
+    blockIdToSeqNumRanges.put(blockId, SequenceNumberRanges(seqNumRangesInCurrentBlock.toArray))
     seqNumRangesInCurrentBlock.clear()
     logDebug(s"Generated block $blockId has $blockIdToSeqNumRanges")
   }

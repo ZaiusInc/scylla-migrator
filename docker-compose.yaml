@@ -1,6 +1,8 @@
 services:
   spark-master:
     build: dockerfiles/spark
+    networks:
+      - scylla
     command: master
     environment:
       SPARK_PUBLIC_DNS: localhost
@@ -15,6 +17,8 @@ services:
 
   spark-worker:
     build: dockerfiles/spark
+    networks:
+      - scylla
     command: worker
     environment:
       SPARK_WORKER_CORES: 2
@@ -28,3 +32,28 @@ services:
       - ./parquet-data:/parquet-data
     depends_on:
       - spark-master
+
+  scylladb-node1:
+    image: scylladb/scylla:latest
+    networks:
+      - scylla
+    volumes:
+      - ./data/node1:/var/lib/scylla
+    command: "--seeds scylladb-node1,scylladb-node2,scylladb-node3 --smp 1 --memory 256M"
+  scylladb-node2:
+    image: scylladb/scylla:latest
+    networks:
+      - scylla
+    volumes:
+      - ./data/node2:/var/lib/scylla
+    command: "--seeds scylladb-node1,scylladb-node2,scylladb-node3 --smp 1 --memory 256M"
+  scylladb-node3:
+    image: scylladb/scylla:latest
+    networks:
+      - scylla
+    volumes:
+      - ./data/node3:/var/lib/scylla
+    command: "--seeds scylladb-node1,scylladb-node2,scylladb-node3 --smp 1 --memory 256M"
+
+networks:
+  scylla:

@@ -16,7 +16,6 @@ import org.apache.spark.unsafe.types.UTF8String
 import com.datastax.oss.driver.api.core.ConsistencyLevel
 import com.scylladb.migrator.scylla.SourceDataFrame
 
-import scala.collection.immutable.ArraySeq
 import scala.collection.mutable.ArrayBuffer
 
 object Cassandra {
@@ -113,7 +112,6 @@ object Cassandra {
           .groupBy {
             case (fieldName, value, ttl, writetime) => (ttl, writetime)
           }
-          .view
           .mapValues(
             _.map {
               case (fieldName, value, _, _) => fieldName -> value
@@ -141,7 +139,7 @@ object Cassandra {
                 .getOrElse(fields.getOrElse(field.name, CassandraOption.Unset))
             } ++ Seq(ttl.getOrElse(0L), writetime.getOrElse(CassandraOption.Unset))
 
-            Row(ArraySeq.unsafeWrapArray(newValues): _*)
+            Row(newValues: _*)
         }
     }
 
@@ -205,7 +203,8 @@ object Cassandra {
   def readDataframe(spark: SparkSession,
                     source: SourceSettings.Cassandra,
                     preserveTimes: Boolean,
-                    tokenRangesToSkip: Set[(Token[_], Token[_])]): SourceDataFrame = {
+                    tokenRangesToSkip: Set[(Token[_], Token[_])],
+                    targetTokens: Set[Token[_]]): SourceDataFrame = {
     val connector = Connectors.sourceConnector(spark.sparkContext.getConf, source)
     val consistencyLevel = source.consistencyLevel match {
       case "LOCAL_QUORUM" => ConsistencyLevel.LOCAL_QUORUM
@@ -221,6 +220,7 @@ object Cassandra {
       log.info(
         s"Using DEFAULT consistencyLevel [${consistencyLevel}] for SOURCE based on unrecognized source config [${source.consistencyLevel}]")
     }
+    log.info(s"Target tokens size: $targetTokens")
 
     val readConf = ReadConf
       .fromSparkConf(spark.sparkContext.getConf)
@@ -245,7 +245,10 @@ object Cassandra {
       .cassandraTable[CassandraSQLRow](
         source.keyspace,
         source.table,
-        (s, e) => !tokenRangesToSkip.contains((s, e)))
+        (s, e) =>
+          !tokenRangesToSkip.contains((s, e)) && (targetTokens.isEmpty || containsTargetToken(
+            (s, e),
+            targetTokens)))
       .withConnector(connector)
       .withReadConf(readConf)
       .select(selection.columnRefs: _*)
@@ -292,6 +295,26 @@ object Cassandra {
       tableDef
     )
 
-    SourceDataFrame(resultingDataframe, selection.timestampColumns, true)
+    val filteredDataframe = source.filter match {
+      case Some(filter) => resultingDataframe.filter(filter)
+      case None         => resultingDataframe
+    }
+
+    SourceDataFrame(filteredDataframe, selection.timestampColumns, false)
   }
+
+  def containsToken(token: Token[_], range: (Token[_], Token[_])): Boolean = {
+    val comparableToken = token.asInstanceOf[Token[Comparable[_]]]
+    val comparableRange =
+      (range._1.asInstanceOf[Token[Comparable[_]]], range._2.asInstanceOf[Token[Comparable[_]]])
+
+    if (comparableRange._2 > comparableRange._1) {
+      comparableToken >= comparableRange._1 && comparableToken <= comparableRange._2
+    } else {
+      comparableToken >= comparableRange._1 || comparableToken <= comparableRange._2
+    }
+  }
+
+  def containsTargetToken(range: (Token[_], Token[_]), targetTokens: Set[Token[_]]): Boolean =
+    targetTokens.exists(token => containsToken(token, range))
 }
